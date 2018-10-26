@@ -86,6 +86,8 @@ lookup v (Env mm) = IM.lookup v mm
 
 
 
+-- | TEST DATA
+
 -- λ> test ex0
 -- Just 42
 ex0 :: Expr IM.Key Int

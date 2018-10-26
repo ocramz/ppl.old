@@ -1,5 +1,5 @@
 {-# language DeriveFunctor #-}
-module PPL.Internal.DeBruijn where
+module PPL.Internal.BirdMeertens98 where
 
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
