@@ -8,106 +8,81 @@ import Control.Monad.Catch (MonadThrow(..), throwM)
 import GHC.Exception
 import Data.Typeable
 
+import Data.Bifunctor
+
 import Prelude hiding (lookup)
 
 data Bind v =
     Zero
   | Succ v deriving (Eq, Show, Functor)
 
-data Term v = Var v | App (Term v) (Term v) | Abs (Term (Bind v)) deriving (Eq, Show, Functor)
+data Term v a =
+  Var v | Const a | App (Term v a) (Term v a) | Abs (Term (Bind v) a)
+  deriving (Eq, Show, Functor)
 
-abstract :: Eq v => Term v -> v -> Term v
+instance Bifunctor Term where
+  bimap f g tt = case tt of
+    Var v -> Var (f v)
+    Const c -> Const (g c)
+    App t1 t2 -> App (bimap f g t1) (bimap f g t2)
+    Abs t -> Abs (bimap (f <$>) g t)
+
+term :: (u -> v) -> Term u a -> Term v a
+term = first    
+
+abstract :: Eq v => Term v a -> v -> Term v a
 abstract t x = Abs $ lift t x
 
-lift :: Eq t => Term t -> t -> Term (Bind t)
+lift :: Eq t => Term t a -> t -> Term (Bind t) a
 lift (Var y) x
   | y == x = Var Zero
   | otherwise = Var (Succ y)
 lift (App u v) x = App (lift u x) (lift v x)
 lift (Abs t) x = Abs $ lift t (Succ x)
+lift (Const c) _ = Const c
 
-reduce :: Term v -> Term v -> Term v
-reduce (Abs s) t = subst s t
+reduce :: Term v a -> Term v a -> Maybe (Term v a) 
+reduce s0 t = case s0 of
+  Abs s -> Just $ subst s t
+  _ -> Nothing
 
-subst :: Term (Bind v) -> Term v -> Term v
+subst :: Term (Bind v) a -> Term v a -> Term v a
+subst (Const c) _ = Const c
 subst (Var s) t = case s of
   Zero -> t
   Succ x -> Var x
 subst (App u v) t = App (subst u t) (subst v t)
-subst (Abs s) t = Abs $ subst s (Succ <$> t)
+subst (Abs s) t = Abs $ subst s (term Succ t)
 
 
 
 
+-- Bird, Meertens 98
 
 
+-- data Term v = Var v | App (Term v) (Term v) | Abs (Term (Bind v)) deriving (Eq, Show, Functor)
 
--- data Expr v a =
---     Var v
---   | Const a
---   | App (Expr v a) (Expr v a)
---   | Lam (Expr (Bind v) a) deriving (Eq, Show)
+-- abstract :: Eq v => Term v -> v -> Term v
+-- abstract t x = Abs $ lift t x
 
--- -- lift (Var y) x
--- --   | x == y = Var Zero
--- --   | otherwise = Var (Succ y)
--- -- lift (Lam t) x = Lam $ lift t (Succ x)  
--- lift (App u v) x = App (lift u x) (lift v x)  
+-- lift :: Eq t => Term t -> t -> Term (Bind t)
+-- lift (Var y) x
+--   | y == x = Var Zero
+--   | otherwise = Var (Succ y)
+-- lift (App u v) x = App (lift u x) (lift v x)
+-- lift (Abs t) x = Abs $ lift t (Succ x)
 
--- data Value m a =
---     Val a
---   | Fun (Value m a -> m (Value m a))
+-- reduce :: Term v -> Term v -> Maybe (Term v)
+-- reduce s0 t = case s0 of
+--   Abs s -> Just $ subst s t
+--   _ -> Nothing
 
--- -- interp :: Ord k =>
--- --           M.Map k (Value Maybe a)
--- --        -> Expr k a
--- --        -> Maybe (Value Maybe a)
--- interp env ex = case ex of
---   -- Lam 
---   App e1 e2 -> do
---     f <- interp env e1
---     e <- interp env e2
---     apply f e 
---   Const c -> pure $ Val c
---   Var x -> M.lookup x env
-
--- apply :: MonadThrow m => Value m a -> Value m a -> m (Value m a)
--- apply v a = case v of
---   Fun k -> k a
---   _ -> throwM $ NotAFunction "Not a function"
-  
--- data Except = NotAFunction String deriving (Eq, Show, Typeable)
--- instance Exception Except
-
-
-
-
-
-
-
-
-
-
-
--- environment, encoded as IntMap
-
-newtype Env a = Env { unEnv :: IM.IntMap a } deriving (Eq, Show)
-
-empty :: Env a
-empty = Env IM.empty
-
-size :: Env a -> Int
-size = IM.size . unEnv
-
-mkEnv :: Foldable t => t a -> Env a
-mkEnv xs = foldl (flip augment) empty xs
-
-augment :: a -> Env a -> Env a
-augment x (Env mm) = Env $ IM.insert k x mm where
-  k = IM.size mm
-
-lookup :: IM.Key -> Env a -> Maybe a
-lookup v (Env mm) = IM.lookup v mm
+-- subst :: Term (Bind v) -> Term v -> Term v
+-- subst (Var s) t = case s of
+--   Zero -> t
+--   Succ x -> Var x
+-- subst (App u v) t = App (subst u t) (subst v t)
+-- subst (Abs s) t = Abs $ subst s (Succ <$> t)
 
 
 
