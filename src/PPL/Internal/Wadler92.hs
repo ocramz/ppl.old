@@ -48,7 +48,7 @@ interp env ex = case ex of
       a <- interp env e1
       b <- interp env e2
       add a b    
-  Lam v -> pure $ Fun $ \a -> interp (augment a env) v
+  Lam e -> pure $ Fun $ \v -> interp (augment v env) e
   App e1 e2 -> do
     f <- interp env e1
     e <- interp env e2

@@ -28,6 +28,7 @@ library
                      , containers
                      , exceptions
                      , free
+                     , mtl
                      , mwc-probability
 
 -- executable ppl

@@ -1,9 +1,12 @@
 {-# language LambdaCase #-}
+{-# language FlexibleContexts #-}
 module PPL.Internal.VDMeent18 where
 
 import qualified Data.IntMap as IM
 import qualified Data.Map as M
 -- import qualified PPL.Internal.IEnv as IE
+
+import Control.Monad.State
 
 import Prelude hiding (lookup)
 
@@ -24,12 +27,30 @@ data Expr v a =
 
 -- | 'defn f x = ...' == let f (lambda x .  ...)
 
+defun :: v -> Expr v a -> Expr v a
+defun fn fbody = Let fn (Lam fbody)
+
+interpS ::
+  (MonadState (Env v (Expr v a)) f, Monad f, Ord v) =>
+     Expr v a
+  -> f (Either (Expr v a) (Value m a))
+interpS = \case
+  Const c -> pure $ Right $ Val c
+  Let v ex -> do
+    env <- get
+    put $ augment v ex env
+    pure $ Left ex
+  -- Lam e -> pure $ Right $ Fun $
+
+  
 
 -- interp env = \case
 --   Const c -> pure $ Val c
 --   -- Var x -> IE.lookup x env
 --   Let v e
 
+
+-- let_ env v e
 
 
 -- | Boolean expressions (i.e. that evaluate to a Boolean value)
@@ -65,6 +86,7 @@ instance Ord v => Monoid (Env v a) where
 empty :: Env v a
 empty = Env M.empty
 
+union :: Ord v => Env v a -> Env v a -> Env v a
 union (Env e1) (Env e2) = Env $ M.union e1 e2
 
 fromList :: (Foldable t, Ord v) => t (v, a) -> Env v a
