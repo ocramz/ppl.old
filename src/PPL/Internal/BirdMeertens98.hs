@@ -16,8 +16,9 @@ data Bind v =
     Zero
   | Succ v deriving (Eq, Show, Functor)
 
+-- the paper uses 'Abs' ("abstraction") rather than 'Lam'
 data Term v a =
-  Var v | Const a | App (Term v a) (Term v a) | Abs (Term (Bind v) a)
+  Var v | Const a | App (Term v a) (Term v a) | Lam (Term (Bind v) a)
   deriving (Eq, Show, Functor)
 
 instance Bifunctor Term where
@@ -25,25 +26,25 @@ instance Bifunctor Term where
     Var v -> Var (f v)
     Const c -> Const (g c)
     App t1 t2 -> App (bimap f g t1) (bimap f g t2)
-    Abs t -> Abs (bimap (f <$>) g t)
+    Lam t -> Lam (bimap (f <$>) g t)
 
 term :: (u -> v) -> Term u a -> Term v a
 term = first    
 
 abstract :: Eq v => Term v a -> v -> Term v a
-abstract t x = Abs $ lift t x
+abstract t x = Lam $ lift t x
 
 lift :: Eq t => Term t a -> t -> Term (Bind t) a
 lift (Var y) x
   | y == x = Var Zero
   | otherwise = Var (Succ y)
 lift (App u v) x = App (lift u x) (lift v x)
-lift (Abs t) x = Abs $ lift t (Succ x)
+lift (Lam t) x = Lam $ lift t (Succ x)
 lift (Const c) _ = Const c
 
 reduce :: Term v a -> Term v a -> Maybe (Term v a) 
 reduce s0 t = case s0 of
-  Abs s -> Just $ subst s t
+  Lam s -> Just $ subst s t
   _ -> Nothing
 
 subst :: Term (Bind v) a -> Term v a -> Term v a
@@ -52,7 +53,7 @@ subst (Var s) t = case s of
   Zero -> t
   Succ x -> Var x
 subst (App u v) t = App (subst u t) (subst v t)
-subst (Abs s) t = Abs $ subst s (term Succ t)
+subst (Lam s) t = Lam $ subst s (term Succ t)
 
 
 

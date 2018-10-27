@@ -7,6 +7,8 @@ import Control.Monad.Catch (MonadThrow(..), throwM)
 import GHC.Exception
 import Data.Typeable
 
+import PPL.Internal.IEnv 
+
 import Prelude hiding (lookup)
 
 
@@ -40,7 +42,7 @@ liftOp2 f (Val a) (Val b) = pure $ Val (f a b)
 liftOp2 _ _ _ = Nothing
 
 
-interp :: Num a => Env (Value Maybe a) -> Expr IM.Key a -> Maybe (Value Maybe a)
+interp :: Num a => IEnv (Value Maybe a) -> Expr IM.Key a -> Maybe (Value Maybe a)
 interp env ex = case ex of
   Plus e1 e2 -> do
       a <- interp env e1
@@ -63,25 +65,7 @@ data Except = NotAFunction String deriving (Eq, Show, Typeable)
 instance Exception Except
 
 
--- environment, encoded as IntMap
 
-newtype Env a = Env { unEnv :: IM.IntMap a } deriving (Eq, Show)
-
-empty :: Env a
-empty = Env IM.empty
-
-size :: Env a -> Int
-size = IM.size . unEnv
-
-mkEnv :: Foldable t => t a -> Env a
-mkEnv xs = foldl (flip augment) empty xs
-
-augment :: a -> Env a -> Env a
-augment x (Env mm) = Env $ IM.insert k x mm where
-  k = IM.size mm
-
-lookup :: IM.Key -> Env a -> Maybe a
-lookup v (Env mm) = IM.lookup v mm
 
 
 
