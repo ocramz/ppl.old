@@ -31,7 +31,7 @@ defun :: v -> Expr v a -> Expr v a
 defun fn fbody = Let fn (Lam fbody)
 
 interpS ::
-  (MonadState (Env v (Expr v a)) f, Monad f, Ord v) =>
+  (MonadState (Env v (Expr v a)) f, Applicative m, Monad f, Ord v) =>
      Expr v a
   -> f (Either (Expr v a) (Value m a))
 interpS = \case
@@ -40,7 +40,7 @@ interpS = \case
     env <- get
     put $ augment v ex env
     pure $ Left ex
-  -- Lam e -> pure $ Right $ Fun $
+  Lam e -> pure $ Right $ Fun $ \a -> pure a -- !!!
 
   
 
