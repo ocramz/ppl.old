@@ -19,10 +19,13 @@ library
   ghc-options:         -Wall
   hs-source-dirs:      src
   exposed-modules:     Lib
-                       PPL.Internal.IEnv  
+                       PPL.Internal.IEnv
+                       PPL.Internal.Wadler92                       
                        PPL.Internal.BirdMeertens98
-                       PPL.Internal.Wadler92
+                       PPL.Internal.McBride04                       
                        PPL.Internal.VDMeent18
+                       PPL.Internal.TaglessFinal1 
+                       PPL.Internal.Mini                      
 
   build-depends:       base >= 4.7 && < 5
                      , containers
