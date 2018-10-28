@@ -28,9 +28,14 @@ termSubst j s term = walk 0 term where
     Lam t    -> Lam $ walk (c + 1) t
     t1 :$ t2 -> walk c t1 :$ walk c t2
 
+-- | The term being substituted for the bound variable is first shifted up by one, then the substitution is made, and then the whole result is shifted down by one to account for the fact that the bound variable has been used up.
 termSubstTop :: (Ord i, Num i) => Expr i a1 -> Expr i a4 -> Expr i a5
 termSubstTop s t = termShift (-1) (termSubst 0 (termShift 1 s) t)
 
+
+isval = \case
+  Lam _  -> True
+  _ ->  False
 
 
 -- Pierce, TAPL, Ch. 3-6
