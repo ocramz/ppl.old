@@ -27,14 +27,19 @@ lets_ decls body = foldl (flip $ uncurry let_) body decls
 
 
 -- | Value type
-data Value a =
+data Value m a =
     Val a
-  | Fun (Value a -> Value a)
+  | Fun (Value m a -> m (Value m a))
 
 -- | Evaluating an 'Expr' produces a 'Value'
-eval = \case
-  Const x -> Val x
-  v :-> body -> undefined
+eval env = \case
+  Const x -> pure $ Val x
+  v :-> body -> do
+    undefined
+  e1 :$ e2 -> do
+    f <- eval env e1
+    e <- eval env e2
+    apply f e 
   where
     apply v x = case v of
       Fun f -> f x
