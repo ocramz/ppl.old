@@ -6,24 +6,51 @@ import GHC.Exception
 import Data.Typeable
 
 
-data V i =
-    B i  -- ^ Bound variables
-  | F i  -- ^ Free variables
-  deriving (Eq, Show)
-
-mkVar :: V Integer
-mkVar = F 0
+-- Pierce, Ch. 7
 
 data Expr i a =
-    Var (V i) -- ^ Variable
+    Var i -- ^ Variable
   | Lam (Expr i a)  -- ^ Lambda
   | Expr i a :$ Expr i a  -- ^ Application
   deriving (Eq, Show)
 
+termShift :: (Ord i, Num i) => i -> Expr i a1 -> Expr i a2
+termShift d term = walk 0 term where
+  walk c t0 = case t0 of
+    Var x    -> if x >= c then Var (x + d) else Var x
+    Lam t    -> Lam $ walk (c + 1) t
+    t1 :$ t2 -> walk c t1 :$ walk c t2
+
+termSubst :: (Num i, Ord i) => i -> Expr i a1 -> Expr i a2 -> Expr i a3
+termSubst j s term = walk 0 term where
+  walk c t0 = case t0 of
+    Var x    -> if x == j + c then termShift c s else Var x
+    Lam t    -> Lam $ walk (c + 1) t
+    t1 :$ t2 -> walk c t1 :$ walk c t2
+
+termSubstTop :: (Ord i, Num i) => Expr i a1 -> Expr i a4 -> Expr i a5
+termSubstTop s t = termShift (-1) (termSubst 0 (termShift 1 s) t)
 
 
--- reduce = \case
---   e1 :$ e2 -> \case
+
+-- Pierce, TAPL, Ch. 3-6
+
+-- data V i =
+--     B i  -- ^ Bound variables
+--   | F i  -- ^ Free variables
+--   deriving (Eq, Show)
+
+-- mkVar :: V Integer
+-- mkVar = F 0
+
+-- data Expr i a =
+--     Var (V i) -- ^ Variable
+--   | Lam (Expr i a)  -- ^ Lambda
+--   | Expr i a :$ Expr i a  -- ^ Application
+--   deriving (Eq, Show)
+
+-- -- reduce = \case
+-- --   e1 :$ e2 -> \case
     
 
 
