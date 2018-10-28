@@ -34,8 +34,7 @@ data Value m a =
 -- | Evaluating an 'Expr' produces a 'Value'
 eval env = \case
   Const x -> pure $ Val x
-  v :-> body -> do
-    undefined
+  v :-> body -> pure $ Fun $ \v -> eval env' body  -- implement capture-avoiding subs
   e1 :$ e2 -> do
     f <- eval env e1
     e <- eval env e2
