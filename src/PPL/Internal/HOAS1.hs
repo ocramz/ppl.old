@@ -62,20 +62,23 @@ plus :: Exp a b -> Exp a b -> Exp a b
 plus e1 e2 = Roll (PlusF e1 e2)
 
 cata :: Profunctor p => (p b d -> d) -> Rec p b d -> d
-cata _   (Place b)  = b
+cata _   (Place b) = b
 cata phi (Roll bs) = phi (rmap (cata phi) bs)
 
--- eval = cata evalAux   -- ?!
 
--- data Value a = Val a | Fn (Value a -> Value a)
+-- | This cannot have a pure value constructor, otherwise pattern matching in evalAux becomes partial and everything breaks
+newtype Value a = Fn { unFn :: Value a -> Value a }
 
--- -- evalAux :: ExpF (Value a) -> Maybe (Value a)
--- evalAux (AbsF f) = Just $ Fn f
--- evalAux (AppF fm x) = unFn fm >>= \f -> pure (f x)
+eval :: Exp (Value a) (Value a) -> Value a
+eval = cata evalAux
 
--- -- unFn :: Value a -> Maybe (Value a -> Value a)
--- unFn (Fn f) = Just f
--- unFn (Val _) = Nothing
+evalAux :: ExpF (Value a) (Value a) -> Value a
+evalAux e = case e of
+  AbsF f   -> Fn f
+  AppF f x -> unFn f x
+  VarF x   -> Fn $ const x   -- ?!
+  -- PlusF a b -> Fn $ const (a + b)  -- wrong
+
 
 
 
