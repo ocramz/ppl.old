@@ -11,10 +11,6 @@ class Retract a (a -> a) => Reflexive a where
   apply :: a -> (a -> a)
   abstr :: (a -> a) -> a
 
--- data Refl a = Refl { apply :: a -> (a -> a), abstr :: (a -> a) -> a}
-
--- instance Retract a (Refl a) where
-
 
 data E =
     Var String
@@ -28,14 +24,6 @@ eval (Apply e1 e2) env = eval e1 env `apply` eval e2 env
 
   
 
--- data Retract b a = Retract { up :: b -> a, down :: a -> b}
-
--- class Reflexive a where
---   apply :: a -> (a -> a)
---   abstr :: (a -> a) -> a
-
--- instance Reflexive (Retract b a) where
---   apply f a = up f a
 
 
 -- | Environment interface as functions
