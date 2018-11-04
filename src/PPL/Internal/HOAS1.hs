@@ -66,18 +66,35 @@ cata _   (Place b) = b
 cata phi (Roll bs) = phi (rmap (cata phi) bs)
 
 
--- | This cannot have a pure value constructor, otherwise pattern matching in evalAux becomes partial and everything breaks
-newtype Value a = Fn { unFn :: Value a -> Value a }
+newtype Rec' f = In { out :: f (Rec' f) } 
 
-eval :: Exp (Value a) (Value a) -> Value a
-eval = cata evalAux
+cata' :: Functor f => (f b -> b) -> (Rec' f -> b)
+cata' phi (In x) = phi $ cata' phi <$> x
 
-evalAux :: ExpF (Value a) (Value a) -> Value a
-evalAux e = case e of
-  AbsF f   -> Fn f
-  AppF f x -> unFn f x
-  VarF x   -> Fn $ const x   -- ?!
-  -- PlusF a b -> Fn $ const (a + b)  -- wrong
+ana' :: Functor f => (a -> f a) -> (a -> Rec' f)
+ana' psi x = In $ ana' psi <$> psi x
+
+hylo' :: Functor f => (a -> f a) -> (f c -> c) -> a -> c
+hylo' psi phi = phi . fmap (hylo' psi phi) . psi
+
+-- hylo :: Functor f => (a -> f a) -> (f c -> c) -> a -> c
+-- hylo psi phi = cata' phi . ana' psi
+
+-- ana psi x 
+
+
+-- -- | This cannot have a pure value constructor, otherwise pattern matching in evalAux becomes partial and everything breaks
+-- newtype Value a = Fn { unFn :: Value a -> Value a }
+
+-- eval :: Exp (Value a) (Value a) -> Value a
+-- eval = cata evalAux
+
+-- evalAux :: ExpF (Value a) (Value a) -> Value a
+-- evalAux e = case e of
+--   AbsF f   -> Fn f
+--   AppF f x -> unFn f x
+--   VarF x   -> Fn $ const x   -- ?!
+--   -- PlusF a b -> Fn $ const (a + b)  -- wrong
 
 
 
