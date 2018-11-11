@@ -9,7 +9,10 @@ import Data.Functor.Classes (Show1(..), Show2(..), showsUnaryWith, showsPrec1)
 -- | From `bound`
 
 -- | Var
-data Var b a = B b | F a deriving (Eq, Show, Generic, Generic1)
+data Var b a =
+  B b   -- ^ Bound variable
+  | F a -- ^ Free variable
+  deriving (Eq, Show, Generic, Generic1)
 
 instance Show2 Var where
   liftShowsPrec2 f _ _ _ d (B a) = showsUnaryWith f "B" d a
@@ -29,9 +32,9 @@ instance (Show b, Show1 f) => Show1 (Scope b f) where
 instance (Show a, Show b, Show1 f) => Show (Scope b f a) where
   showsPrec = showsPrec1
 
+-- | 
 -- >>> :m +Data.List
--- λ> abstract (`elemIndex` "bar") "barry"
--- 
+-- >>> abstract (`elemIndex` "bar") "barry"
 -- Scope [B 0,B 1,B 2,B 2,F "y"]
 abstract :: Applicative f => (a -> Maybe b) -> f a -> Scope b f a
 abstract f e = Scope (k <$> e) where

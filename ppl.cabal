@@ -21,9 +21,11 @@ library
   exposed-modules:     Lib
                        PPL.Internal.IEnv                  
                        PPL.Internal.Mini
-                       PPL.Internal.Bound                   
+                       PPL.Internal.Bound
+                       PPL.Internal.Bound.Mono                       
 
   build-depends:       base >= 4.7 && < 5
+                     -- , bound
                      , containers
                      , exceptions
                      , free
