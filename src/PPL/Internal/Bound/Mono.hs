@@ -1,9 +1,10 @@
 {-# language LambdaCase #-}
+
 module PPL.Internal.Bound.Mono where
 
 import Data.List (elemIndex)
 
--- | 
+
 
 -- | Var
 data Var b a =

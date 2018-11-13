@@ -19,19 +19,21 @@ library
   ghc-options:         -Wall
   hs-source-dirs:      src
   exposed-modules:     Lib
-                       PPL.Internal.IEnv                  
-                       PPL.Internal.Mini
-                       PPL.Internal.Bound
-                       PPL.Internal.Bound.Mono                       
+                       -- PPL.Internal.IEnv                                         
+                       -- PPL.Internal.Mini
+                       -- PPL.Internal.Bound
+                       -- PPL.Internal.Bound.Mono
+                       PPL.Internal.MonadBayes
 
   build-depends:       base >= 4.7 && < 5
                      -- , bound
                      , containers
                      , exceptions
-                     , free
+                     -- , free
+                     , log-domain
                      , mtl
                      , mwc-probability
-                     -- , transformers-compat
+                     , transformers
 
 -- executable ppl
 --   default-language:    Haskell2010
