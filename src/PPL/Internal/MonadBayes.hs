@@ -13,6 +13,23 @@ import qualified Control.Monad.Trans.Cont as C
 
 import qualified System.Random.MWC.Probability as MWC
 
+randomWalk :: (MonadSample m, MonadCond m) => [R] -> m [R]
+randomWalk ys = do
+  s <- gamma 1 1
+  let expand xss [] = return xss
+      expand (x:xs) (y:ys) = do
+        x' <- normal x s
+        score (normalPdf x' 1 y)
+        expand (x' : x : xs) ys
+        where
+          normalPdf m s z = Exp (1/(s*sqrt(s*pi))) - Exp ((z-m)**2/(2*s**2))
+  xs <- expand [0] ys
+  return $ reverse xs
+          
+
+
+-- 
+
 type R = Double
 
 class Monad m => MonadSample m where
@@ -20,11 +37,13 @@ class Monad m => MonadSample m where
   bernoulli :: R -> m Bool
   bernoulli p = fmap (< p) uniform
   normal :: R -> R -> m R
+  gamma :: R -> R -> m R
   -- normal mu sig = MWC.normal mu sig
 
 instance PrimMonad m => MonadSample (MWC.Prob m) where
   uniform = MWC.uniform
-  normal = MWC.normal 
+  normal = MWC.normal
+  gamma = MWC.gamma
 
 class Monad m => MonadCond m where
   score :: Log R -> m ()
@@ -52,3 +71,10 @@ instance Monad m => MonadCond (W m) where
 -- | Lift a natural transformation into a W
 hoistW :: (forall x . m x -> n x) -> W m a -> W n a
 hoistW f (W m) = W $ S.mapStateT f m
+
+
+-- * tracing
+
+-- | Rather than using the Church encoding of the free monad over the (r ->)
+-- base functor as Scibior 2018, we use the equivalent 'Cont r'
+data Tr r m a = Tr (W (C.Cont r) a) (m ([r], a))
