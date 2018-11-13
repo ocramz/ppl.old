@@ -33,6 +33,7 @@ library
                      , log-domain
                      , mtl
                      , mwc-probability
+                     , primitive
                      , transformers
 
 -- executable ppl
