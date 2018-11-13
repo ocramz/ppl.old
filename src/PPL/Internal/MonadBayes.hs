@@ -10,6 +10,9 @@ import Control.Monad.Primitive
 import qualified Control.Monad.Trans.State as S
 import qualified Control.Monad.Trans.Class as T
 import qualified Control.Monad.Trans.Cont as C
+import qualified Control.Monad.Trans.Reader as R
+
+import Control.Monad.ST
 
 import qualified System.Random.MWC.Probability as MWC
 
@@ -26,6 +29,10 @@ randomWalk ys = do
           
 normalPdf :: (Precise a, RealFloat a) => a -> a -> a -> Log a
 normalPdf m s z = Exp (1/(s*sqrt(2*pi))) + Exp (-(z-m)**2/(2*s**2))
+
+-- runRW :: MonadSample m => [R] -> m ([R], Log R)
+runRandomWalk xs = runSampler $ runW (randomWalk xs)
+
 -- 
 
 type R = Double
@@ -48,6 +55,25 @@ class Monad m => MonadCond m where
 
 class (MonadSample m, MonadCond m) => MonadInfer m
 
+
+-- | Sampler
+newtype Sampler a =
+  Sampler (forall s . R.ReaderT (MWC.GenST s) (ST s) a) deriving (Functor)
+
+instance Applicative Sampler
+instance Monad Sampler where
+  -- (Sampler s) >>= f = Sampler (s >>= _)
+
+instance MonadSample Sampler where
+  uniform = Sampler $ do
+    g <- R.ask
+    T.lift $ MWC.sample uniform g
+
+runSampler :: Sampler a -> a
+runSampler (Sampler s) = runST $ do
+  g <- MWC.create
+  R.runReaderT s g
+
 -- | Weighting inference transformer
 newtype W m a = W (S.StateT (Log R) m a) deriving (Functor, Applicative, Monad)
 
@@ -57,8 +83,8 @@ instance T.MonadTrans W where
 instance MonadSample m => MonadSample (W m) where
   uniform = T.lift uniform
 
-mkW :: Monad m => (Log R -> (a, Log R)) -> W m a
-mkW fs = W (S.state fs)
+-- mkW :: Monad m => (Log R -> (a, Log R)) -> W m a
+-- mkW fs = W (S.state fs)
 
 runW :: W m a -> m (a, Log R)
 runW (W w) = S.runStateT w 1
