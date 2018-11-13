@@ -21,13 +21,11 @@ randomWalk ys = do
         x' <- normal x s
         score (normalPdf x' 1 y)
         expand (x' : x : xs) ys
-        where
-          normalPdf m s z = Exp (1/(s*sqrt(s*pi))) - Exp ((z-m)**2/(2*s**2))
   xs <- expand [0] ys
   return $ reverse xs
           
-
-
+normalPdf :: (Precise a, RealFloat a) => a -> a -> a -> Log a
+normalPdf m s z = Exp (1/(s*sqrt(2*pi))) + Exp (-(z-m)**2/(2*s**2))
 -- 
 
 type R = Double
