@@ -16,6 +16,9 @@ import Control.Monad.ST
 
 import qualified System.Random.MWC.Probability as MWC
 
+
+-- linReg yss = do 
+
 randomWalk :: (MonadSample m, MonadCond m) => [R] -> m [R]
 randomWalk yss = do
   s <- gamma 1 1
@@ -25,12 +28,12 @@ randomWalk yss = do
         score (normalPdf x' 1 y)
         expand (x' : xss) ys
   xs <- expand [0] yss
-  return $ reverse xs
-          
+  return $ tail $ reverse xs
+    
 normalPdf :: (Precise a, RealFloat a) => a -> a -> a -> Log a
 normalPdf m s z = Exp (1/(s*sqrt(2*pi))) + Exp (-(z-m)**2/(2*s**2))
 
--- runRW :: MonadSample m => [R] -> m ([R], Log R)
+runRandomWalk :: [R] -> ([R], Log R)
 runRandomWalk xs = runSamplerW (randomWalk xs)
 
 runSamplerW :: W SamplerST a -> (a, Log R)
@@ -97,9 +100,6 @@ instance MonadSample m => MonadSample (W m) where
   uniform = T.lift uniform
   gamma a b = T.lift (gamma a b)
   normal mu sig = T.lift (normal mu sig)
-
--- mkW :: Monad m => (Log R -> (a, Log R)) -> W m a
--- mkW fs = W (S.state fs)
 
 runW :: W m a -> m (a, Log R)
 runW (W w) = S.runStateT w 1
