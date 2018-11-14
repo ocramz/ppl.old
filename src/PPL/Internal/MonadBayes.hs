@@ -17,23 +17,25 @@ import Control.Monad.ST
 import qualified System.Random.MWC.Probability as MWC
 
 randomWalk :: (MonadSample m, MonadCond m) => [R] -> m [R]
-randomWalk ys = do
+randomWalk yss = do
   s <- gamma 1 1
   let expand xss [] = return xss
-      expand (x:xs) (y:ys) = do
+      expand xss@(x:_) (y:ys) = do
         x' <- normal x s
         score (normalPdf x' 1 y)
-        expand (x' : x : xs) ys
-  xs <- expand [0] ys
+        expand (x' : xss) ys
+  xs <- expand [0] yss
   return $ reverse xs
           
 normalPdf :: (Precise a, RealFloat a) => a -> a -> a -> Log a
 normalPdf m s z = Exp (1/(s*sqrt(2*pi))) + Exp (-(z-m)**2/(2*s**2))
 
 -- runRW :: MonadSample m => [R] -> m ([R], Log R)
-runRandomWalk xs = runSamplerST $ runW (randomWalk xs)
+runRandomWalk xs = runSamplerW (randomWalk xs)
 
-baz = runSamplerST . runW
+runSamplerW :: W SamplerST a -> (a, Log R)
+runSamplerW = runSamplerST . runW
+
 -- 
 
 type R = Double
@@ -44,7 +46,6 @@ class Monad m => MonadSample m where
   bernoulli p = fmap (< p) uniform
   normal :: R -> R -> m R
   gamma :: R -> R -> m R
-  -- normal mu sig = MWC.normal mu sig
 
 instance PrimMonad m => MonadSample (MWC.Prob m) where
   uniform = MWC.uniform
@@ -59,10 +60,8 @@ class (MonadSample m, MonadCond m) => MonadInfer m
 
 -- | Sampler 
 newtype SamplerST a =
-  SamplerST (forall s . R.ReaderT (MWC.GenST s) (ST s) a) deriving (Functor)
-
-unSamplerST :: SamplerST a -> R.ReaderT (MWC.Gen s) (ST s) a
-unSamplerST (SamplerST s) = s 
+  SamplerST { unSamplerST :: forall s . R.ReaderT (MWC.GenST s) (ST s) a }
+  deriving (Functor)
 
 instance Applicative SamplerST where
   pure x = SamplerST $ pure x
@@ -80,8 +79,9 @@ instance MonadSample SamplerST where
     T.lift $ MWC.sample (gamma a b) g
   normal mu sig = SamplerST $ do
     g <- R.ask
-    T.lift $ MWC.sample (normal mu sig) g      
-
+    T.lift $ MWC.sample (normal mu sig) g
+    
+-- | Create a PRNG and run a Sampler with it
 runSamplerST :: SamplerST a -> a
 runSamplerST (SamplerST s) = runST $ do
   g <- MWC.create
