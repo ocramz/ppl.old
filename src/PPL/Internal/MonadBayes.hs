@@ -31,8 +31,9 @@ normalPdf :: (Precise a, RealFloat a) => a -> a -> a -> Log a
 normalPdf m s z = Exp (1/(s*sqrt(2*pi))) + Exp (-(z-m)**2/(2*s**2))
 
 -- runRW :: MonadSample m => [R] -> m ([R], Log R)
-runRandomWalk xs = runSampler $ runW (randomWalk xs)
+runRandomWalk xs = runSamplerST $ runW (randomWalk xs)
 
+baz = runSamplerST . runW
 -- 
 
 type R = Double
@@ -56,21 +57,33 @@ class Monad m => MonadCond m where
 class (MonadSample m, MonadCond m) => MonadInfer m
 
 
--- | Sampler
-newtype Sampler a =
-  Sampler (forall s . R.ReaderT (MWC.GenST s) (ST s) a) deriving (Functor)
+-- | Sampler 
+newtype SamplerST a =
+  SamplerST (forall s . R.ReaderT (MWC.GenST s) (ST s) a) deriving (Functor)
 
-instance Applicative Sampler
-instance Monad Sampler where
-  -- (Sampler s) >>= f = Sampler (s >>= _)
+unSamplerST :: SamplerST a -> R.ReaderT (MWC.Gen s) (ST s) a
+unSamplerST (SamplerST s) = s 
 
-instance MonadSample Sampler where
-  uniform = Sampler $ do
+instance Applicative SamplerST where
+  pure x = SamplerST $ pure x
+  (SamplerST f) <*> (SamplerST x) = SamplerST $ f <*> x
+
+instance Monad SamplerST where
+  (SamplerST x) >>= f = SamplerST $ x >>= unSamplerST . f
+
+instance MonadSample SamplerST where
+  uniform = SamplerST $ do
     g <- R.ask
     T.lift $ MWC.sample uniform g
+  gamma a b = SamplerST $ do
+    g <- R.ask
+    T.lift $ MWC.sample (gamma a b) g
+  normal mu sig = SamplerST $ do
+    g <- R.ask
+    T.lift $ MWC.sample (normal mu sig) g      
 
-runSampler :: Sampler a -> a
-runSampler (Sampler s) = runST $ do
+runSamplerST :: SamplerST a -> a
+runSamplerST (SamplerST s) = runST $ do
   g <- MWC.create
   R.runReaderT s g
 
@@ -82,6 +95,8 @@ instance T.MonadTrans W where
 
 instance MonadSample m => MonadSample (W m) where
   uniform = T.lift uniform
+  gamma a b = T.lift (gamma a b)
+  normal mu sig = T.lift (normal mu sig)
 
 -- mkW :: Monad m => (Log R -> (a, Log R)) -> W m a
 -- mkW fs = W (S.state fs)
