@@ -32,6 +32,14 @@ newtype HistT m a = HistT {
 class Monad m => Observe m where
   observe :: String -> (Double, Dist1 Double) -> m ()
 
+class Monad m => Sample m where
+  sample :: Dist1 a -> m a
+
+bindS :: (Sample m, Observe m) => String -> Dist1 Double -> m ()
+bindS k d = do
+  v <- sample d
+  k <~ (v, d)
+
 -- | Append a sampled value and its distribution to a map, indexed by string names
 --
 -- e.g.
