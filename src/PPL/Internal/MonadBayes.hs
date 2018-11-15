@@ -39,7 +39,37 @@ runRandomWalk xs = runSamplerW (randomWalk xs)
 runSamplerW :: W SamplerST a -> (a, Log R)
 runSamplerW = runSamplerST . runW
 
--- 
+
+-- | One step of the MH algorithm
+
+-- mhStep :: MonadSample m => (t -> Log R) -> (t -> m t) -> t -> m t
+mhStep q p x = do
+  x' <- q x
+  let alpha = p x' / p x
+      r = min 1 alpha
+  accept <- bernoulli $ ln r
+  let y | accept = x'
+        | otherwise = x
+  pure y
+
+-- mhStep :: MonadSample m =>
+--           R          -- ^ Acceptance rate (0 - 1)
+--        -> (b -> m b) -- ^ Kernel
+--        -> m b        -- ^ Sampler
+--        -> m b
+-- mhStep rho kern mx = do
+--   x <- mx
+--   x' <- kern x
+--   p <- bernoulli rho
+--   let y | p = x'
+--         | otherwise = x
+--   pure y
+  
+  
+
+
+
+-- * Basic classes
 
 type R = Double
 
@@ -55,6 +85,7 @@ instance PrimMonad m => MonadSample (MWC.Prob m) where
   normal = MWC.normal
   gamma = MWC.gamma
 
+-- | Conditioning (i.e. accumulation of log-likelihood)
 class Monad m => MonadCond m where
   score :: Log R -> m ()
 
@@ -104,6 +135,9 @@ instance MonadSample m => MonadSample (W m) where
 runW :: W m a -> m (a, Log R)
 runW (W w) = S.runStateT w 1
 
+-- execW :: Functor m => W m a -> m (Log R)
+-- execW w = snd <$> runW w 
+
 instance Monad m => MonadCond (W m) where
   score w = W (S.modify (* w))
 
@@ -112,8 +146,39 @@ hoistW :: (forall x . m x -> n x) -> W m a -> W n a
 hoistW f (W m) = W $ S.mapStateT f m
 
 
--- * tracing
+
+
+-- * Traced
 
 -- | Rather than using the Church encoding of the free monad over the (r ->)
 -- base functor as Scibior 2018, we use the equivalent 'Cont r'
-data Tr r m a = Tr (W (C.Cont r) a) (m ([r], a))
+
+-- -- data Tr r m a = Tr {            -- 
+-- --     trCont :: W (C.ContT r m) a   -- ^ I don't know how to use this object, yet
+-- --   -- , trTrace :: m ([r], a)
+-- --   } deriving (Functor)
+
+-- data Tr r m a = Tr {
+--     trCont :: W (C.ContT r m) a   -- ^ I don't know how to use this object, yet
+--   -- , trTrace :: m ([r], a)
+--   } -- deriving (Functor)
+
+-- -- runTr :: Applicative m => Tr (a, Log R) m a -> m (a, Log R)
+-- runTr (Tr trc) = C.runContT (runW trc) pure
+
+
+
+-- * sampling in a continuation monad
+
+-- newtype CG r a = CG { unCG :: C.ContT r SamplerST a } deriving (Functor, Applicative, Monad)
+
+-- -- runCG (CG cg) = runSamplerST $ C.runContT cg pure
+
+
+--
+
+-- newtype A m a = A (W (C.ContT R m) a)
+
+-- newtype B r a = B { unB :: W (C.ContT r SamplerST) a } deriving (Functor, Applicative, Monad)
+
+-- runB (B bb) = runSamplerST $ C.runContT (runW bb) pure

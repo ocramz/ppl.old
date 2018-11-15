@@ -24,6 +24,7 @@ library
                        -- PPL.Internal.Bound
                        -- PPL.Internal.Bound.Mono
                        PPL.Internal.MonadBayes
+                       PPL.Internal.Literature.Hur15
 
   build-depends:       base >= 4.7 && < 5
                      -- , bound
