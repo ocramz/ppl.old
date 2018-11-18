@@ -18,14 +18,26 @@ data Dist1 a =
   | Uniform a a
   deriving (Eq, Show)
 
--- | A key-value store of lists of RV observations. Each key represents a distinct random variable, and the list elements are pairs of (observation, distribution with parameters)
+-- | A key-value store of lists of RV observations. Each key represents a distinct random variable, and the list elements are pairs of (observation, distribution with parameters) (This is called "Theta_Acc" in the article)
 newtype Obs k d1 d = Obs (M.Map k [(d1, Dist1 d)]) deriving (Eq, Show)
 
 emptyObs :: Obs k d1 d
 emptyObs = Obs M.empty
 
-appendObs :: Ord k => k -> (d1, Dist1 d) -> Obs k d1 d -> Obs k d1 d
-appendObs k v (Obs mm) = Obs $ M.insertWith (++) k [v] mm
+singletonObs :: k -> (d1, Dist1 d) -> Obs k d1 d
+singletonObs k v = Obs $ M.singleton k [v]
+{-# inline singletonObs #-}
+
+unionObs :: Ord k => Obs k d1 d -> Obs k d1 d -> Obs k d1 d
+unionObs (Obs m1) (Obs m2) = Obs $ M.unionWith (++) m1 m2
+{-# inline unionObs #-}
+
+instance Ord k => Semigroup (Obs k d1 d) where
+  (<>) = unionObs
+
+instance Ord k => Monoid (Obs k d1 d) where
+  mempty = emptyObs
+  mappend = (<>)
 
 newtype HistT m a = HistT {
   unHistT :: S.StateT (Obs String Double Double) m a
@@ -35,12 +47,13 @@ class Monad m => Observe m where
   observe :: String -> (Double, Dist1 Double) -> m ()
 
 class Monad m => Sample m where
-  sample :: Dist1 a -> m a
+  sample :: Dist1 a -> m a  
 
-bindS :: (Sample m, Observe m) => String -> Dist1 Double -> m ()
+-- bindS :: (Sample m, Observe m) => String -> Dist1 Double -> m ()
 bindS k d = do
   v <- sample d
   k <~ (v, d)
+  pure v
 
 -- | Append a sampled value and its distribution to a map, indexed by string names
 --
@@ -51,7 +64,7 @@ bindS k d = do
 (<~) = observe  
 
 instance Monad m => Observe (HistT m) where
-  observe k v = HistT $ S.modify (appendObs k v)
+  observe k v = HistT $ S.modify $ mappend (singletonObs k v) 
 
 
 
