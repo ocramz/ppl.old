@@ -1,3 +1,8 @@
+{-|
+Implementation of
+
+Hur, Nori, Rajamani, Samuel - A provably correct sampler for probabilistic programs - 2015
+-}
 {-# language DeriveFunctor, GeneralizedNewtypeDeriving #-}
 {-# language MultiParamTypeClasses, TypeFamilies #-}
 module PPL.Internal.Literature.Hur15 where
@@ -13,20 +18,17 @@ data Dist1 a =
   | Uniform a a
   deriving (Eq, Show)
 
-newtype Theta k d1 d = Theta (M.Map k [(d1, Dist1 d)]) deriving (Eq, Show)
+-- | A key-value store of lists of RV observations. Each key represents a distinct random variable, and the list elements are pairs of (observation, distribution with parameters)
+newtype Obs k d1 d = Obs (M.Map k [(d1, Dist1 d)]) deriving (Eq, Show)
 
--- empty :: Theta k d
--- empty = Theta M.empty
+emptyObs :: Obs k d1 d
+emptyObs = Obs M.empty
 
--- lookup :: Ord k => k -> Theta k d -> Maybe [(d, Dist1 d)]
--- lookup k (Theta mm) = M.lookup k mm
-
-append :: Ord k => k -> (d1, Dist1 d) -> Theta k d1 d -> Theta k d1 d
-append k v (Theta mm) = Theta $ M.insertWith (++) k [v] mm
-
+appendObs :: Ord k => k -> (d1, Dist1 d) -> Obs k d1 d -> Obs k d1 d
+appendObs k v (Obs mm) = Obs $ M.insertWith (++) k [v] mm
 
 newtype HistT m a = HistT {
-  unHistT :: S.StateT (Theta String Double Double) m a
+  unHistT :: S.StateT (Obs String Double Double) m a
                           } deriving (Functor, Applicative, Monad)
 
 class Monad m => Observe m where
@@ -49,7 +51,7 @@ bindS k d = do
 (<~) = observe  
 
 instance Monad m => Observe (HistT m) where
-  observe k v = HistT $ S.modify (append k v)
+  observe k v = HistT $ S.modify (appendObs k v)
 
 
 
